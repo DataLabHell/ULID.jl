@@ -6,11 +6,13 @@ using Random
     u = Ulid(UInt128(0))
     @test iszero(u.value)
     # test manual building
-    rng = Random.Xoshiro(0)
+    rng = Random.seed!(0)
     xr = rand(rng, UInt128)
     t = rand(rng, UInt128)
-    uv1 = _build_ulid(Random.Xoshiro(0), t)
-    uv2 = _build_ulid(Random.Xoshiro(0), t)
+    Random.seed!(0)
+    uv1 = _build_ulid(rng, t)
+    Random.seed!(rng, 0)
+    uv2 = _build_ulid(rng, t)
     @test uv1 == uv2
     us = bitstring(uv1.value)
     # first 48bits are the timestamp

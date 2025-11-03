@@ -69,7 +69,8 @@ end
 
 function Base.string(u::Ulid)
   u = u.value
-  a = Base.StringMemory(26)
+  # use Base.StringMemory(26) in newer version
+  a = Base.StringVector(26)
   for i in 26:-1:1
     # divide by 32 (0x1f == 31)
     @inbounds a[i] = _ENCODING[1 + u & 0x1f]
