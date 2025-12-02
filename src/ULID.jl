@@ -15,7 +15,7 @@
 ULID
 
 Unique Lexicographically Sortable Identifier [ULID](https://github.com/ulid/spec).
-Binary implementation in julia.
+Binary implementation in Julia.
 """
 module ULID
 
@@ -34,35 +34,37 @@ Ulid(u::Ulid) = u
 
 Base.UInt128(u::Ulid) = u.value
 
-# Crockford's base-32 encoding
+# Crockford's Base32 encoding
 const _ENCODING = UInt8['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J',
                         'K', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V',
                         'W', 'X', 'Y', 'Z']
 
+const _DECODING = fill(UInt8(255), 43)
+for (index, value) in enumerate(_ENCODING)
+    _DECODING[value - 0x2f] = UInt8(index - 1)
+end
+
 function _build_ulid(rng::AbstractRNG, timestamp::UInt128)
-    bytes = rand(rng, UInt128)
-    # make space for the timestamp
-    bytes >>= UInt128(48)
-
-    bytes |= timestamp << UInt128(80)
-
-    return Ulid(bytes)
+    bits = rand(rng, UInt128)
+    bits >>= 48  # make space for 48 bit timestamp
+    bits |= timestamp << 80
+    return Ulid(bits)
 end
 
 """
 ```
     ulid([rng=Random.RandomDevice()])
 ```
-Generate a ULID using the default rng for randomness and `Base.time` for reading the current time.
+Generate a ULID using the default random number generator and `Base.time` for reading the current time.
 
 ```
     ulid(rng)
 ```
-Generate random part of the ULID with a user defined rng.
+Generate a ULID with a user-defined random number generator.
 """
 function ulid(rng::AbstractRNG=Random.RandomDevice())
-    # current time in ms, rounded to an Integer
+    # current time (Float64) in seconds, converted to milliseconds, rounded to an integer
     timestamp = round(UInt128, time() * 1e3)
     _build_ulid(rng, timestamp)
 end
@@ -82,23 +84,19 @@ end
 Base.print(io::IO, u::Ulid) = print(io, string(u))
 Base.show(io::IO, u::Ulid) = print(io, ULID, "(\"", u, "\")")
 
-
-function __convert_digit(c::UInt8)
-    x = findfirst(==(c), _ENCODING)
-    if isnothing(x)
-        return nothing
-    end
-    return UInt8(x - 1)
-end
-
 function Base.tryparse(::Type{Ulid}, s::AbstractString)
     u = UInt128(0)
     shift = 0
     ncodeunits(s) != 26 && return nothing
     for i in 26:-1:1
-        x = __convert_digit(codeunit(s, i))
-        isnothing(x) && return nothing
-        u |= UInt128(x) << shift
+        x = codeunit(s, i)
+        # not in 0-9, A-Z, a-z
+        (x < 0x30 || x > 0x7a) && return nothing
+        # lowercase to uppercase
+        x = x > 0x5a ? (x - 0x20) : x
+        d = _DECODING[x - 0x2f]
+        d == 0xff && return nothing
+        u |= UInt128(d) << shift
         shift += 5
     end
     return Ulid(u)

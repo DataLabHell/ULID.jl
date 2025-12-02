@@ -1,7 +1,10 @@
 name = "ULID"
 uuid = "6c3f1218-4c8c-4ae5-8681-dbf78ac1ac05"
-version = "1.0.0"
-authors = ["Stephan Antholzer <stephan.antholzer@datalabhell.at>"]
+version = "0.1.0"
+authors = [
+  "Stephan Antholzer <stephan.antholzer@datalabhell.at>",
+  "Johannes Sappl <johannes.sappl@datalabhell.at>",
+]
 
 [deps]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
