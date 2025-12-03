@@ -37,3 +37,31 @@ end
     @test parse(Ulid, "0"^13 * "1"^13).value == UInt128(0x1084210842108421)
     @test parse(Ulid, "Z"^26).value == typemax(UInt128)
 end
+
+@testset "ULID case insensitivity" begin
+    # Generate a canonical ULID
+    ulid_value = ulid()
+    ulid_str = string(ulid_value)
+    
+    # Test various case combinations (Crockford Base32 is case-insensitive)
+    cases = [
+        uppercase(ulid_str),
+        lowercase(ulid_str),
+        # Mixed case example
+        ulid_str[1:13] * uppercase(ulid_str[14:20]) * lowercase(ulid_str[21:26]),
+    ]
+    
+    @testset "Case variant: $case" for case in cases
+        parsed = tryparse(Ulid, case)
+        @test parsed !== nothing
+        @test parsed == ulid_value
+    end
+    
+    # Test invalid length still fails
+    @test tryparse(Ulid, uppercase(ulid_str[1:25])) === nothing
+    
+    # Test invalid characters fail regardless of case
+    invalid = uppercase(ulid_str) * "X"  # Extra invalid char
+    @test tryparse(Ulid, invalid) === nothing
+end
+
